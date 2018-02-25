@@ -1,16 +1,31 @@
-FROM microsoft/dotnet:2.0-sdk AS build-env
+## Build Stage
+## Build Stage
+#FROM microsoft/aspnetcore-build as build-env
+#WORKDIR /source
+#COPY . .
+##RUN dotnet restore
+##RUN dotnet publish -o /publish --configuration Release
+#
+## Publish Stage
+#FROM microsoft/aspnetcore
+#WORKDIR /app
+##COPY --from=build-env /publish .
+FROM microsoft/aspnetcore:2.0 AS base
 WORKDIR /app
 
-# copy csproj and restore as distinct layers
-COPY *.csproj ./
-RUN dotnet restore
+FROM microsoft/aspnetcore-build:2.0 AS build
+WORKDIR /src
+#COPY *.sln ./
+#COPY productServices/productServices.csproj productServices/
+#RUN dotnet restore
+COPY . .
+#WORKDIR /src/productServices
+RUN dotnet build -c Release -o /app
 
-# copy everything else and build
-COPY . ./
-RUN dotnet publish -c Release -o out
+FROM build AS publish
+RUN dotnet publish -c Release -o /app
 
-# build runtime image
-FROM microsoft/dotnet:2.0-runtime 
+FROM base AS final
 WORKDIR /app
-COPY --from=build-env /app/out ./
+COPY --from=publish /app .
 ENTRYPOINT ["dotnet", "BillsProvidersServices.dll"]
